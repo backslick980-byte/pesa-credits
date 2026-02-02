@@ -607,12 +607,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
 
     <script>
-        // Validation patterns
         const nameRegex = /^[a-zA-Z\s.'-]{2,}$/;
         const phoneRegex = /^(?:\+?254|0)[17]\d{8}$/;
         const idRegex = /^\d{7,10}$/;
 
-        // Handle form submission
         function handleSubmit(e) {
             e.preventDefault();
             const f = e.target;
@@ -621,65 +619,40 @@
             const id = f.id_number.value.trim();
             const type = f.loan_type.value;
 
-            // Disable submit button
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Checking... <i class="fas fa-spinner fa-spin"></i>';
-
-            // Validate inputs
             if (!nameRegex.test(name)) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
                 return Swal.fire({
                     title: 'Invalid Name',
-                    text: 'Please enter a valid full name (at least 2 characters)',
+                    text: 'Please enter your full name (letters only)',
                     icon: 'error',
-                    confirmButtonColor: '#00A36C',
-                    confirmButtonText: 'Try Again',
-                    backdrop: 'rgba(0, 0, 0, 0.1)'
+                    confirmButtonColor: '#4361ee'
                 });
             }
-
             if (!phoneRegex.test(phone)) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
                 return Swal.fire({
-                    title: 'Invalid Phone Number',
-                    text: 'Please enter a valid Kenyan phone number (e.g., 0712 345 678 or 254712345678)',
+                    title: 'Invalid Phone',
+                    text: 'Please enter a valid Kenyan phone number',
                     icon: 'error',
-                    confirmButtonColor: '#00A36C',
-                    confirmButtonText: 'Try Again',
-                    backdrop: 'rgba(0, 0, 0, 0.1)'
+                    confirmButtonColor: '#4361ee'
                 });
             }
-
             if (!idRegex.test(id)) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
                 return Swal.fire({
-                    title: 'Invalid ID Number',
-                    text: 'Please enter a valid Kenyan ID number (7-10 digits)',
+                    title: 'Invalid ID',
+                    text: 'Please enter a valid Kenyan ID (7-10 digits)',
                     icon: 'error',
-                    confirmButtonColor: '#00A36C',
-                    confirmButtonText: 'Try Again',
-                    backdrop: 'rgba(0, 0, 0, 0.1)'
+                    confirmButtonColor: '#4361ee'
                 });
             }
-
             if (!type) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
                 return Swal.fire({
-                    title: 'Missing Information',
+                    title: 'Missing Loan Type',
                     text: 'Please select your loan purpose',
                     icon: 'error',
-                    confirmButtonColor: '#00A36C',
-                    confirmButtonText: 'Try Again',
-                    backdrop: 'rgba(0, 0, 0, 0.1)'
+                    confirmButtonColor: '#4361ee'
                 });
             }
 
-            // Show loading overlay
+            // Show loading popup
             const loadingOverlay = document.getElementById('loadingOverlay');
             loadingOverlay.style.display = 'flex';
 
@@ -692,29 +665,35 @@
                     loan_type: type
                 }));
                 
-                // Reset button
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
-                
                 // Hide loading overlay before navigation
                 loadingOverlay.style.display = 'none';
                 
                 // Navigate to next page
                 window.location.href = 'apply.html';
-            }, 3000);
+            }, 2500);
         }
 
-        // Restore form data on page load
+        // Hide loading overlay when page loads (in case user navigates back)
+        window.addEventListener('pageshow', function(event) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        });
+
         window.onload = () => {
             const data = JSON.parse(sessionStorage.getItem('myLoan') || '{}');
             if (data.name) {
                 document.getElementById('name').value = data.name;
+                document.getElementById('name').dispatchEvent(new Event('input'));
             }
             if (data.phone_number) {
                 document.getElementById('phone_number').value = data.phone_number;
+                document.getElementById('phone_number').dispatchEvent(new Event('input'));
             }
             if (data.id_number) {
                 document.getElementById('id_number').value = data.id_number;
+                document.getElementById('id_number').dispatchEvent(new Event('input'));
             }
             if (data.loan_type) {
                 document.getElementById('loan_type').value = data.loan_type;
@@ -726,45 +705,6 @@
                 loadingOverlay.style.display = 'none';
             }
         };
-
-        // Hide loading overlay when page loads (in case user navigates back)
-        window.addEventListener('pageshow', function(event) {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-            }
-            
-            // Reset submit button
-            const submitBtn = document.getElementById('submitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Check Eligibility <i class="fas fa-arrow-right"></i>';
-            }
-        });
-
-        // Animate progress bar
-        document.addEventListener('DOMContentLoaded', () => {
-            const progressBar = document.querySelector('.progress-bar');
-            setTimeout(() => {
-                progressBar.style.width = '25%';
-            }, 300);
-        });
-
-        // Real-time phone formatting
-        document.getElementById('phone_number').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            if (value.startsWith('254')) {
-                if (value.length >= 3) value = value.slice(0, 3) + ' ' + value.slice(3);
-                if (value.length >= 7) value = value.slice(0, 7) + ' ' + value.slice(7);
-                if (value.length >= 11) value = value.slice(0, 11) + ' ' + value.slice(11);
-            } else if (value.startsWith('0')) {
-                if (value.length >= 4) value = value.slice(0, 4) + ' ' + value.slice(4);
-                if (value.length >= 8) value = value.slice(0, 8) + ' ' + value.slice(8);
-            }
-            
-            e.target.value = value;
-        });
     </script>
 </body>
 </html>
