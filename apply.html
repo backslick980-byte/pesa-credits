@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apply for Loan | Pesa Credits</title>
+    <title>Apply for Loan | Okoa Chapaa</title>
     
     <!-- Favicons -->
     <link rel="apple-touch-icon" sizes="192x192" href="icons/icon.192.png">
@@ -477,6 +477,66 @@
             text-align: center;
         }
 
+        /* STK Push Overlay */
+        .stk-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .stk-card {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stk-icon {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .stk-title {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--black);
+            margin-bottom: 1rem;
+        }
+
+        .stk-message {
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .stk-phone {
+            background: var(--off-white);
+            border-radius: var(--border-radius-md);
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .stk-timer {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 1rem;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 480px) {
             .application-container {
@@ -501,6 +561,14 @@
             
             .summary-item {
                 padding: 0.5rem;
+            }
+            
+            .stk-card {
+                padding: 1.5rem;
+            }
+            
+            .stk-icon {
+                font-size: 3rem;
             }
         }
 
@@ -624,6 +692,16 @@
             </div>
         </section>
 
+        <!-- Payment Information -->
+        <div class="payment-info">
+            <div class="info-header">
+                <div class="info-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="info-title">Important Information</div>
+            </div>
+            <p class="info-text">To complete your loan application, you'll need to pay the processing fee via M-Pesa. You'll receive an STK prompt on your phone once you proceed.</p>
+        </div>
 
         <!-- Submit Button -->
         <button id="submit-btn" class="submit-btn" disabled>
@@ -646,6 +724,20 @@
         </div>
     </main>
 
+    <!-- STK Push Overlay -->
+    <div class="stk-overlay" id="stkOverlay">
+        <div class="stk-card">
+            <div class="stk-icon">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <h2 class="stk-title">STK Push Sent!</h2>
+            <p class="stk-message">Check your phone for the M-Pesa prompt</p>
+            <div class="stk-phone" id="stkPhoneNumber"></div>
+            <p class="stk-message">Enter your M-Pesa PIN to complete payment of <strong id="stkAmount"></strong></p>
+            <p class="stk-timer" id="stkTimer">Verifying payment... 00:00</p>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
@@ -657,7 +749,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     
     <script>
-        // Serverless API endpoints (same as original)
+        // Serverless API endpoints
         const API_ENDPOINTS = {
             initiatePayment: '/api/initiate-payment',
             verifyPayment: '/api/verify-payment',
@@ -683,6 +775,8 @@
 
         let selectedLoan = null;
         let paymentReference = null;
+        let paymentTimer = null;
+        let stkTimerInterval = null;
 
         // Select loan option function
         function selectLoanOption(element, amount, fee) {
@@ -776,66 +870,50 @@
                 const loadingOverlay = document.getElementById('loadingOverlay');
                 loadingOverlay.style.display = 'flex';
 
-                // Simulate API calls (replace with actual implementation)
-                await simulatePaymentProcess();
+                // Normalize phone number
+                const normalizedPhone = await normalizePhoneNumber(userData.phone_number);
+                
+                // Send STK push for the processing fee
+                const paymentResponse = await sendPayHeroSTK(
+                    normalizedPhone,
+                    selectedLoan.fee,
+                    selectedLoan.amount
+                );
 
-                // Hide loading overlay
-                loadingOverlay.style.display = 'none';
-
-                // Show success message
-                await Swal.fire({
-                    title: 'Payment Successful!',
-                    html: `
-                        <div style="text-align: center; padding: 1rem 0;">
-                            <div style="font-size: 4rem; color: #10B981; margin-bottom: 1rem;">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <h3 style="margin-bottom: 0.5rem; color: #00A36C;">Loan Approved!</h3>
-                            <p style="color: #666; margin-bottom: 1rem;">
-                                Your loan of <strong>Ksh ${selectedLoan.amount.toLocaleString()}</strong> has been approved and will be disbursed shortly.
-                            </p>
-                            <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                                <p style="margin: 0; font-size: 0.9rem; color: #00A36C;">
-                                    <i class="fas fa-clock"></i> Funds will arrive in your M-Pesa within 5 minutes
-                                </p>
-                            </div>
-                        </div>
-                    `,
-                    icon: 'success',
-                    confirmButtonText: 'Continue to Dashboard',
-                    confirmButtonColor: '#00A36C',
-                    width: '90%',
-                    backdrop: 'rgba(0, 0, 0, 0.1)'
-                });
-
-                // Store approval data
-                sessionStorage.setItem('loanApproved', JSON.stringify({
-                    ...userData,
-                    ...selectedLoan,
-                    approvedAt: new Date().toISOString()
-                }));
-
-                // Show app promo
-                document.getElementById('app-promo').style.display = 'block';
-
-                // Reset button
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dash.html';
-                }, 1000);
-
+                if (paymentResponse && paymentResponse.reference) {
+                    paymentReference = paymentResponse.reference;
+                    
+                    // Hide loading overlay
+                    loadingOverlay.style.display = 'none';
+                    
+                    // Show STK push overlay
+                    showSTKOverlay(normalizedPhone, selectedLoan.fee);
+                    
+                    // Start payment verification
+                    const paymentSuccess = await checkPaymentStatus(paymentReference, 20);
+                    
+                    // Hide STK overlay
+                    hideSTKOverlay();
+                    
+                    if (paymentSuccess) {
+                        await showSuccessMessage();
+                    } else {
+                        throw new Error('Payment verification failed');
+                    }
+                } else {
+                    throw new Error('Payment initiation failed - no reference received');
+                }
             } catch (error) {
-                // Hide loading overlay
-                const loadingOverlay = document.getElementById('loadingOverlay');
-                loadingOverlay.style.display = 'none';
-
+                console.error('Payment error:', error);
+                
+                // Hide overlays
+                document.getElementById('loadingOverlay').style.display = 'none';
+                hideSTKOverlay();
+                
                 // Reset button
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-
+                
                 // Show error message
                 await Swal.fire({
                     title: 'Payment Failed',
@@ -863,37 +941,216 @@
             }
         }
 
-        // Simulate payment process (replace with actual API calls)
-        async function simulatePaymentProcess() {
+        // Send STK Push via Serverless Function
+        async function sendPayHeroSTK(phoneNumber, amount, loanAmount) {
+            try {
+                const response = await fetch(API_ENDPOINTS.initiatePayment, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone_number: phoneNumber,
+                        amount: amount,
+                        loan_amount: loanAmount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Payment initiation failed');
+                }
+
+                return result;
+            } catch (error) {
+                console.error('Payment API Error:', error);
+                throw error;
+            }
+        }
+
+        // Check payment status via Serverless Function
+        async function checkPaymentStatus(reference, maxAttempts = 20) {
+            let attempts = 0;
+            
             return new Promise((resolve, reject) => {
-                // Simulate API delay
-                setTimeout(() => {
-                    const isSuccess = Math.random() > 0.2; // 80% success rate for demo
+                paymentTimer = setInterval(async () => {
+                    attempts++;
                     
-                    if (isSuccess) {
-                        resolve();
-                    } else {
-                        reject(new Error('Payment processing failed. Please check your M-Pesa balance and try again.'));
+                    // Update timer display
+                    const timerEl = document.getElementById('stkTimer');
+                    if (timerEl) {
+                        const minutes = Math.floor(attempts / 2);
+                        const seconds = (attempts % 2) * 30;
+                        timerEl.textContent = `Verifying payment... ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                     }
-                }, 2000);
+                    
+                    try {
+                        const response = await fetch(`${API_ENDPOINTS.verifyPayment}?reference=${reference}`);
+                        const result = await response.json();
+
+                        console.log(`Payment status check ${attempts}:`, result);
+
+                        if (result.success && (result.status === 'COMPLETED' || result.status === 'SUCCESS')) {
+                            clearInterval(paymentTimer);
+                            resolve(true);
+                        } else if (result.success && (result.status === 'FAILED' || result.status === 'CANCELLED')) {
+                            clearInterval(paymentTimer);
+                            reject(new Error('Payment failed or was cancelled'));
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(paymentTimer);
+                            reject(new Error('Payment verification timeout'));
+                        }
+                    } catch (error) {
+                        console.error('Status check error:', error);
+                        
+                        if (attempts >= maxAttempts) {
+                            clearInterval(paymentTimer);
+                            reject(new Error('Payment verification failed'));
+                        }
+                    }
+                }, 3000);
             });
         }
 
-        // Keep original API functions for reference (they won't be called in this demo)
-        async function sendPayHeroSTK(phoneNumber, amount, loanAmount) {
-            // Original implementation would go here
-            throw new Error('API not implemented in demo');
-        }
-
-        async function checkPaymentStatus(reference, maxAttempts = 20) {
-            // Original implementation would go here
-            throw new Error('API not implemented in demo');
-        }
-
+        // Normalize phone via Serverless Function
         async function normalizePhoneNumber(phone) {
-            // Original implementation would go here
-            throw new Error('API not implemented in demo');
+            try {
+                const response = await fetch(API_ENDPOINTS.normalizePhone, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Phone normalization failed');
+                }
+
+                return result.normalized_phone;
+            } catch (error) {
+                console.error('Phone normalization error:', error);
+                // Fallback to manual normalization
+                return normalizePhoneManually(phone);
+            }
         }
+
+        // Manual phone normalization fallback
+        function normalizePhoneManually(phone) {
+            let normalized = phone.replace(/\D/g, '');
+            
+            if (normalized.startsWith('0') && normalized.length === 10) {
+                normalized = '254' + normalized.substring(1);
+            } else if (normalized.startsWith('254') && normalized.length === 12) {
+                // Already in 254 format
+            } else if (normalized.startsWith('+254')) {
+                normalized = normalized.substring(1);
+            } else if (normalized.length === 9) {
+                normalized = '254' + normalized;
+            }
+            
+            return normalized;
+        }
+
+        // Show STK overlay
+        function showSTKOverlay(phoneNumber, amount) {
+            const overlay = document.getElementById('stkOverlay');
+            const phoneEl = document.getElementById('stkPhoneNumber');
+            const amountEl = document.getElementById('stkAmount');
+            
+            // Format phone for display
+            const displayPhone = phoneNumber.startsWith('254') ? 
+                `0${phoneNumber.substring(3)}` : phoneNumber;
+            
+            phoneEl.textContent = displayPhone;
+            amountEl.textContent = `Ksh ${amount}`;
+            
+            // Start timer
+            let seconds = 0;
+            const timerEl = document.getElementById('stkTimer');
+            stkTimerInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                timerEl.textContent = `Verifying payment... ${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+            
+            overlay.style.display = 'flex';
+        }
+
+        // Hide STK overlay
+        function hideSTKOverlay() {
+            const overlay = document.getElementById('stkOverlay');
+            overlay.style.display = 'none';
+            
+            if (stkTimerInterval) {
+                clearInterval(stkTimerInterval);
+                stkTimerInterval = null;
+            }
+            
+            if (paymentTimer) {
+                clearInterval(paymentTimer);
+                paymentTimer = null;
+            }
+        }
+
+        // Show success message
+        async function showSuccessMessage() {
+            const submitBtn = document.getElementById('submit-btn');
+            
+            await Swal.fire({
+                title: 'Payment Successful!',
+                html: `
+                    <div style="text-align: center; padding: 1rem 0;">
+                        <div style="font-size: 4rem; color: #10B981; margin-bottom: 1rem;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h3 style="margin-bottom: 0.5rem; color: #00A36C;">Loan Approved!</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">
+                            Your loan of <strong>Ksh ${selectedLoan.amount.toLocaleString()}</strong> has been approved and will be disbursed shortly.
+                        </p>
+                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                            <p style="margin: 0; font-size: 0.9rem; color: #00A36C;">
+                                <i class="fas fa-clock"></i> Funds will arrive in your M-Pesa within 5 minutes
+                            </p>
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: 'Continue to Dashboard',
+                confirmButtonColor: '#00A36C',
+                width: '90%',
+                backdrop: 'rgba(0, 0, 0, 0.1)'
+            });
+
+            // Store approval data
+            sessionStorage.setItem('loanApproved', JSON.stringify({
+                ...userData,
+                ...selectedLoan,
+                paymentReference,
+                approvedAt: new Date().toISOString()
+            }));
+
+            // Show app promo
+            document.getElementById('app-promo').style.display = 'block';
+
+            // Reset button
+            submitBtn.innerHTML = '<i class="fas fa-lock"></i> Apply for Loan';
+            submitBtn.disabled = false;
+
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = 'dash.html';
+            }, 1000);
+        }
+
+        // Clean up timers on page unload
+        window.addEventListener('beforeunload', () => {
+            hideSTKOverlay();
+        });
     </script>
 </body>
 </html>
